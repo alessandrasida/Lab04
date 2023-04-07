@@ -34,20 +34,21 @@ public class CorsoDAO {
 				String nome = rs.getString("nome");
 				int periodoDidattico = rs.getInt("pd");
 
-				System.out.println(codins + " " + numeroCrediti + " " + nome + " " + periodoDidattico);
+				// System.out.println(codins + " " + numeroCrediti + " " + nome + " " + periodoDidattico);
 
-				// Crea un nuovo JAVA Bean Corso
-				// Aggiungi il nuovo oggetto Corso alla lista corsi
+				Corso c = new Corso( codins, numeroCrediti, nome, periodoDidattico);
+				corsi.add(c);
 			}
-
+			st.close();
 			conn.close();
-			
+			rs.close();
 			return corsi;
 			
 
 		} catch (SQLException e) {
-			// e.printStackTrace();
-			throw new RuntimeException("Errore Db", e);
+			System.out.println("Error in Corso DAO");
+			e.printStackTrace();
+			return null;
 		}
 	}
 	
@@ -55,23 +56,98 @@ public class CorsoDAO {
 	/*
 	 * Dato un codice insegnamento, ottengo il corso
 	 */
-	public void getCorso(Corso corso) {
-		// TODO
+	public Corso getCorso(String nome) {
+		String sql = "SELECT codins, crediti, nome, pd "
+				+ "FROM corso "
+				+ "WHERE nome = ? ";
+		
+		Corso c = null;
+		Connection conn = ConnectDB.getConnection();
+		try {
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setString(1, nome);
+			ResultSet rs = st.executeQuery();
+			
+			while( rs.next()) {
+				c = new Corso( rs.getString("codins"), rs.getInt("crediti"), 
+						rs.getString("nome"), rs.getInt("pd"));
+						
+			}
+			rs.close();
+			st.close();
+			conn.close();
+			return c;
+		} catch (SQLException e) {
+			System.err.println("Errore connessione database, corso inesistente");
+			e.printStackTrace();
+			return null;
+		}
+		
+		
 	}
 
 	/*
-	 * Ottengo tutti gli studenti iscritti al Corso
+	 * ritorna tutti i corsi a cui uno studente è iscritto, inserendo come parametro la matricola
 	 */
-	public void getStudentiIscrittiAlCorso(Corso corso) {
-		// TODO
+	public List<Corso> getCorsiDiStudente(int matricola){
+		
+		String sql = "SELECT c.codins, c.crediti, c.nome, c.pd "
+				+ "FROM  studente s, corso c,  iscrizione i "
+				+ "WHERE s.matricola = i.matricola AND i.codins = c.codins AND s.matricola = ? ";
+		
+		List<Corso> risultato = new LinkedList<Corso>();
+		
+		Connection conn = ConnectDB.getConnection();
+		try {
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, matricola);
+			ResultSet rs = st.executeQuery();
+			
+			while(rs.next()) {
+				risultato.add(new Corso( rs.getString("codins"), rs.getInt("crediti"), 
+						rs.getString("nome"), rs.getInt("pd")));
+			}
+			rs.close();
+			st.close();
+			conn.close();
+			return risultato;
+			
+		} catch (SQLException e) {
+			System.err.println("Errore connessione database, non esiste studente");
+			e.printStackTrace();
+			return null;
+		}
+		
+		
 	}
-
+	
+	
+	
 	/*
 	 * Data una matricola ed il codice insegnamento, iscrivi lo studente al corso.
 	 */
 	public boolean inscriviStudenteACorso(Studente studente, Corso corso) {
-		// TODO
+		
 		// ritorna true se l'iscrizione e' avvenuta con successo
+		
+		String sql = "INSERT INTO iscrizione ( matricola, codins) "
+				+ "VALUES (? , ?)";
+		Connection conn = ConnectDB.getConnection();
+		try {
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, studente.getMatricola());
+			st.setString(2, corso.getCodins());
+			int rs = st.executeUpdate();
+			if( rs == 1) {
+				return true;
+			}
+		} catch (SQLException e) {
+			System.err.println("Errore connessione database");
+			e.printStackTrace();
+			return false;
+		}
+		
+		
 		return false;
 	}
 
